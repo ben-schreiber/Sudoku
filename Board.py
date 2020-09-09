@@ -10,7 +10,7 @@ class Board:
         self.board = self.__init_board()
         self.mini_box_height = int(sqrt(self.height))
         self.mini_box_width = int(sqrt(self.width))
-        self.valid_nums = [num for num in range(self.mini_box_width * self.mini_box_height)]
+        self.valid_nums = [num for num in range(1, self.mini_box_width * self.mini_box_height + 1)]
 
     def __str__(self):
         output = ''
@@ -36,12 +36,12 @@ class Board:
         """
         # Check the rest of the row
         for other_col_coordinate in range(self.width):
-            if self.board[row][other_col_coordinate] == num:
+            if other_col_coordinate != col and self.board[row][other_col_coordinate] == num:
                 return False
 
         # Check the rest of the column
         for other_row_coordinate in range(self.height):
-            if self.board[other_row_coordinate][col] == num:
+            if other_row_coordinate != row and self.board[other_row_coordinate][col] == num:
                 return False
 
         # Check the mini box that the cell resides in
@@ -50,7 +50,7 @@ class Board:
 
         for _row in range(self.mini_box_height):
             for _col in range(self.mini_box_width):
-                if self.board[row_shift * self.mini_box_height + _row][col_shift * self.mini_box_width + _col] == num:
+                if (_row != row or _col != col) and self.board[row_shift * self.mini_box_height + _row][col_shift * self.mini_box_width + _col] == num:
                     return False
 
         return True
@@ -93,6 +93,14 @@ class Board:
         Useful only for setting the board before the game begins"""
         self.board = board
 
+    def valid_complete_board(self):
+        """Returns True iff the board has been solved"""
+        for row in range(self.height):
+            for col in range(self.width):
+                if not self.is_legal(row, col, self.board[row][col]):
+                    return False
+        return True
+
 
 if __name__ == '__main__':
     game = Board()
@@ -111,5 +119,5 @@ if __name__ == '__main__':
     print(game)
     print(game.is_legal(0, 0, 2))
     print(game.is_legal(6, 1, 8))
-    print(game.is_legal(1, 1, 6))
+    print(game.is_legal(1, 1, 8))
     print(game.is_legal(0, 6, 8))
