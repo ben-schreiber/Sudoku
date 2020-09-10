@@ -1,4 +1,6 @@
-from Board import Board
+from Solvers import *
+from GUI import *
+from time import time
 
 
 class Game:
@@ -59,7 +61,24 @@ class Game:
         while self.playing:
             self.one_turn()
 
+    def run_solver_game(self, solver_name):
+        print(f'Solving the board using {solver_name}. The original board is \n{self.board}')
+        start_time = time()
+        solver_obj = get_solver(solver_name, self.board)
+        solved_board = solver_obj.solve_board()
+        end_time = time()
+        if solver_obj.was_solved():
+            print(f'The board was successfully solved in {end_time - start_time} seconds.\nHere is the solution:\n{solved_board}')
+        else:
+            print(f'The solver could not find a solution to the board :(')
+
+    def run_gui_game(self):
+        gui = GUI(self.board)
+        gui.run_game()
+
 
 if __name__ == '__main__':
     game = Game()
-    game.run_game_from_cli()
+    # game.run_game_from_cli()
+    # game.run_solver_game('backtracking')
+    game.run_gui_game()

@@ -11,6 +11,18 @@ class Board:
         self.mini_box_height = int(sqrt(self.height))
         self.mini_box_width = int(sqrt(self.width))
         self.valid_nums = [num for num in range(1, self.mini_box_width * self.mini_box_height + 1)]
+        default_board = [
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 3, 0, 0, 0, 0, 1, 6, 0],
+            [0, 6, 7, 0, 3, 5, 0, 0, 4],
+            [6, 0, 8, 1, 2, 0, 9, 0, 0],
+            [0, 9, 0, 0, 8, 0, 0, 3, 0],
+            [0, 0, 2, 0, 7, 9, 8, 0, 6],
+            [8, 0, 0, 6, 9, 0, 3, 5, 0],
+            [0, 2, 6, 0, 0, 0, 0, 9, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        ]
+        self.set_board(default_board)
 
     def __str__(self):
         output = ''
@@ -28,7 +40,7 @@ class Board:
     def is_legal(self, row, col, num):
         """
         Given the cell coordinates and attempted number, returns whether or not
-        the number can legally be placed there. Does not account for if the desired cell is already accupied
+        the number can legally be placed there. Does not account for if the desired cell is already occupied
         :param row: The row
         :param col: The column
         :param num: The number
@@ -66,6 +78,13 @@ class Board:
         """
         if 0 <= row < self.height and 0 <= col < self.width and num in self.valid_nums:
             self.board[row][col] = num
+            return True
+        return False
+
+    def reset_cell(self, row, col):
+        """Resets the given (row, col) cell to contain the default val. Returns True iff successful"""
+        if 0 <= row < self.height and 0 <= col < self.width:
+            self.board[row][col] = 0
             return True
         return False
 
