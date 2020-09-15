@@ -1,4 +1,5 @@
 from math import sqrt
+from copy import deepcopy
 
 
 class Board:
@@ -8,6 +9,7 @@ class Board:
     def __init__(self, size=(9, 9)):
         self.height, self.width = size
         self.board = self.__init_board()
+        self.initial_board = deepcopy(self.board)
         self.mini_box_height = int(sqrt(self.height))
         self.mini_box_width = int(sqrt(self.width))
         self.valid_nums = [num for num in range(1, self.mini_box_width * self.mini_box_height + 1)]
@@ -111,6 +113,7 @@ class Board:
         and does not update other internal variables connected to the board.
         Useful only for setting the board before the game begins"""
         self.board = board
+        self.initial_board = deepcopy(self.board)
 
     def valid_complete_board(self):
         """Returns True iff the board has been solved"""
