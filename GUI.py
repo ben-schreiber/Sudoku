@@ -1,16 +1,19 @@
+from copy import deepcopy
+
 import pygame as pg
-from math import ceil
+from Solvers import BacktrackingSolver
 
 
 class GUI:
     TITLE_MESSAGE = 'Sudoku'
-    WINDOW_SIZE = (460, 460)
+    WINDOW_SIZE = (570, 460)
     CELL_BG_COLOR = (0, 0, 0)
     CELL_CLICKED_COLOR = (208, 208, 208)
+    CHECK_BOARD_COLOR = (153, 204, 255)
     SQUARE_SIZE = 50
     DIVIDER_SIZE = 5
     FPS = 30
-    VALID_NUMS = [pg.K_1, pg.K_2, pg.K_3, pg.K_4, pg.K_5, pg.K_6, pg.K_7, pg.K_8, pg.K_9]
+    VALID_NUMS = [pg.K_0, pg.K_1, pg.K_2, pg.K_3, pg.K_4, pg.K_5, pg.K_6, pg.K_7, pg.K_8, pg.K_9]
 
     def __init__(self, board):
         pg.init()
@@ -23,12 +26,14 @@ class GUI:
         self.playing = True
         self.cells = []
         self.highlighted_cell = None
+        self.check_button = None
+        self.board_solution = self.get_solution()
+        print(self.board_solution)
 
     def run_game(self):
         """Manages the logic of the game"""
         pg.event.clear()
-        self.draw(init=True)
-
+        self.draw_all(init=True)
         expecting_input = False
 
         while self.playing:
@@ -49,6 +54,9 @@ class GUI:
                     else:  # If the user clicked on a non-highlighted cell
                         self.highlighted_cell = clicked_cell[0]
                         expecting_input = True
+                elif self.check_button.collidepoint(pos):  # The user clicked the 'Check Board' button
+                    correct = self.check_board()
+                    print(correct)
                 else:  # If the user clicked on something other than a cell
                     self.highlighted_cell = None
                     expecting_input = False
@@ -58,15 +66,28 @@ class GUI:
                     col, row, *_ = self.highlighted_cell
                     row, col = self.convert_row_col(row, col)
                     self.board.apply_move(row, col, self.convert_pg_number(event.key))
-                    expecting_input = False
 
-            self.draw()
+            self.draw_all()
 
         pg.quit()
+
+    def check_board(self):
+        """Checks the current board against the solution. Will return True iff the current board is both full and correct"""
+        for row in range(self.height):
+            for col in range(self.width):
+                if self.board.board[row][col] != self.board_solution.board[row][col]:
+                    return False
+        return True
+
+    def get_solution(self):
+        """Calculates and returns the solution to the board"""
+        solver = BacktrackingSolver(deepcopy(self.board))
+        return solver.solve_board()
 
     def convert_row_col(self, row, col):
         """Converts the (row, col) pair from pixel units to the Sudoku board units"""
         return_row, return_col = 0, 0
+
         for board_row in range(self.height):
             num_row_dividers = board_row // self.board.mini_box_height
             if GUI.SQUARE_SIZE * board_row + num_row_dividers * GUI.DIVIDER_SIZE == row:
@@ -81,7 +102,7 @@ class GUI:
 
     @staticmethod
     def convert_pg_number(num):
-        """Converts a Pygame number constant to its corresponding int. Works for 1-9"""
+        """Converts a Pygame number constant to its corresponding int. Works for 0-9"""
         if num == pg.K_1:
             return 1
         elif num == pg.K_2:
@@ -100,9 +121,11 @@ class GUI:
             return 8
         elif num == pg.K_9:
             return 9
+        elif num == pg.K_0:
+            return 0
 
-    def draw(self, init=False):
-        """Draws the graphics onto the window. If drawing for the first time, set init to 'True'"""
+    def draw_grid(self, init=False):
+        """Draws the grid onto the window. If drawing for the first time, set init to True"""
         self.window.fill((255, 255, 255))
         for row in range(self.height):
             num_row_dividers = row // self.board.mini_box_height
@@ -120,37 +143,22 @@ class GUI:
                 if init:
                     self.cells.append(cell)
 
-        # Highlight a clicked cell if relevant
-        if self.highlighted_cell:
-            pg.draw.rect(
-                self.window,
-                GUI.CELL_CLICKED_COLOR,
-                self.highlighted_cell
-            )
+    def draw_check_board_button(self):
+        """Draws the 'Check Board' button on the right of the board"""
+        cell = pg.draw.rect(
+            self.window,
+            GUI.CHECK_BOARD_COLOR,
+            (465, 5, 100, 30)
+        )
+        self.check_button = cell
+        font = pg.font.SysFont('times new roman', 17)
+        text = font.render('Check Board', 1, (0, 0, 0))
+        self.window.blit(text, (468, 10))
 
-        # Draw the vertical block lines
-        for col_bar in range(self.board.mini_box_width - 1):
-            wid = self.board.mini_box_width * GUI.SQUARE_SIZE
-            pg.draw.line(
-                self.window,
-                GUI.CELL_BG_COLOR,
-                (wid * (col_bar + 1) + col_bar * GUI.DIVIDER_SIZE, 0), (wid * (col_bar + 1) + col_bar * GUI.DIVIDER_SIZE, GUI.WINDOW_SIZE[0]),
-                GUI.DIVIDER_SIZE * 2
-            )
-
-        # Draw the horizontal block lines
-        for row_bar in range(self.board.mini_box_height - 1):
-            wid = self.board.mini_box_height * GUI.SQUARE_SIZE
-            pg.draw.line(
-                self.window,
-                GUI.CELL_BG_COLOR,
-                (0, wid * (row_bar + 1) + row_bar * GUI.DIVIDER_SIZE), (GUI.WINDOW_SIZE[1], wid * (row_bar + 1) + row_bar * GUI.DIVIDER_SIZE),
-                GUI.DIVIDER_SIZE * 2
-            )
-
-        # Draw on the numbers to the board
-        font_init_board = pg.font.SysFont('arial', 22, bold=True)
-        font_user_board = pg.font.SysFont('arial', 22)
+    def draw_numbers(self):
+        """Draws the numbers onto the board"""
+        font_init_board = pg.font.SysFont('times new roman', 22, bold=True)
+        font_user_board = pg.font.SysFont('times new roman', 22)
         text_x_padding = 20
         text_y_padding = 13
         for row in range(self.height):
@@ -163,5 +171,45 @@ class GUI:
                         num_text = font_init_board.render(str(self.board.board[row][col]), 1, (0, 0, 0))
                     self.window.blit(num_text, (GUI.SQUARE_SIZE * col + num_col_dividers * GUI.DIVIDER_SIZE + text_x_padding,
                                                 GUI.SQUARE_SIZE * row + num_row_dividers * GUI.DIVIDER_SIZE + text_y_padding))
+
+    def draw_vertical_lines(self):
+        """Draws the vertical block lines for the board layout"""
+        for col_bar in range(self.board.mini_box_width - 1):
+            wid = self.board.mini_box_width * GUI.SQUARE_SIZE
+            pg.draw.line(
+                self.window,
+                GUI.CELL_BG_COLOR,
+                (wid * (col_bar + 1) + col_bar * GUI.DIVIDER_SIZE, 0), (wid * (col_bar + 1) + col_bar * GUI.DIVIDER_SIZE, GUI.WINDOW_SIZE[0]),
+                GUI.DIVIDER_SIZE * 2
+            )
+
+    def draw_horizontal_lines(self):
+        """Draws the horizontal block lines for the board layout"""
+        for row_bar in range(self.board.mini_box_height - 1):
+            wid = self.board.mini_box_height * GUI.SQUARE_SIZE
+            pg.draw.line(
+                self.window,
+                GUI.CELL_BG_COLOR,
+                (0, wid * (row_bar + 1) + row_bar * GUI.DIVIDER_SIZE), (GUI.WINDOW_SIZE[1], wid * (row_bar + 1) + row_bar * GUI.DIVIDER_SIZE),
+                GUI.DIVIDER_SIZE * 2
+            )
+
+    def draw_highlighted_cell(self):
+        """Draws the highlight on the desired cell if a cell should be highlighted"""
+        if self.highlighted_cell:
+            pg.draw.rect(
+                self.window,
+                GUI.CELL_CLICKED_COLOR,
+                self.highlighted_cell
+            )
+
+    def draw_all(self, init=False):
+        """Draws the graphics onto the window. If drawing for the first time, set init to 'True'"""
+        self.draw_grid(init)
+        self.draw_highlighted_cell()
+        self.draw_vertical_lines()
+        self.draw_horizontal_lines()
+        self.draw_numbers()
+        self.draw_check_board_button()
 
         pg.display.update()

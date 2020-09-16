@@ -34,7 +34,6 @@ class BacktrackingSolver(Solver):
             self.solved = True
             return self.board
         else:
-            print(self.board)
             return self.original_board
 
     def solve_board_helper(self):

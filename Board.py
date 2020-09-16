@@ -72,7 +72,8 @@ class Board:
     def apply_move(self, row, col, num):
         """
         Attempts to apply the given number to the given cell.
-        Will only apply the move if the cell was unoccupied on the initial board
+        Will only apply the move if the cell was unoccupied on the initial board.
+        If num == 0, the desired cell will be cleared
         Returns True iff successful
         :param row: The row
         :param col: The column
@@ -81,7 +82,7 @@ class Board:
         """
         if 0 <= row < self.height \
                 and 0 <= col < self.width \
-                and num in self.valid_nums \
+                and (num in self.valid_nums or num == 0) \
                 and self.initial_board[row][col] == 0:
             self.board[row][col] = num
             return True
