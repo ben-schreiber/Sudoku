@@ -14,7 +14,7 @@ class Solver:
 
     def solve_board(self):
         """
-        Solves the board stored in memory if possible. Will update the Solver object accordingly if the baord was solved
+        Solves the board stored in memory if possible. Will update the Solver object accordingly if the board was solved
         :return: The board object after solving if a solution is possible; otherwise, returns original board
         """
         pass

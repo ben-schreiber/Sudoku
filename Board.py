@@ -13,16 +13,27 @@ class Board:
         self.mini_box_height = int(sqrt(self.height))
         self.mini_box_width = int(sqrt(self.width))
         self.valid_nums = [num for num in range(1, self.mini_box_width * self.mini_box_height + 1)]
+        # default_board = [
+        #     [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        #     [0, 3, 0, 0, 0, 0, 1, 6, 0],
+        #     [0, 6, 7, 0, 3, 5, 0, 0, 4],
+        #     [6, 0, 8, 1, 2, 0, 9, 0, 0],
+        #     [0, 9, 0, 0, 8, 0, 0, 3, 0],
+        #     [0, 0, 2, 0, 7, 9, 8, 0, 6],
+        #     [8, 0, 0, 6, 9, 0, 3, 5, 0],
+        #     [0, 2, 6, 0, 0, 0, 0, 9, 0],
+        #     [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        # ]
         default_board = [
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 3, 0, 0, 0, 0, 1, 6, 0],
-            [0, 6, 7, 0, 3, 5, 0, 0, 4],
-            [6, 0, 8, 1, 2, 0, 9, 0, 0],
-            [0, 9, 0, 0, 8, 0, 0, 3, 0],
-            [0, 0, 2, 0, 7, 9, 8, 0, 6],
-            [8, 0, 0, 6, 9, 0, 3, 5, 0],
-            [0, 2, 6, 0, 0, 0, 0, 9, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0]
+            [4, 8, 9, 2, 6, 1, 5, 7, 3],
+            [2, 3, 5, 8, 4, 7, 1, 6, 9],
+            [1, 6, 7, 9, 3, 5, 2, 8, 4],
+            [6, 7, 8, 1, 2, 3, 9, 4, 5],
+            [5, 9, 1, 4, 8, 6, 7, 3, 2],
+            [3, 4, 2, 5, 7, 9, 8, 1, 6],
+            [8, 1, 4, 6, 9, 2, 3, 5, 7],
+            [7, 2, 6, 3, 5, 8, 4, 9, 1],
+            [9, 5, 3, 7, 1, 4, 6, 2, 0]
         ]
         self.set_board(default_board)
 
@@ -90,10 +101,7 @@ class Board:
 
     def reset_cell(self, row, col):
         """Resets the given (row, col) cell to contain the default val. Returns True iff successful"""
-        if 0 <= row < self.height and 0 <= col < self.width:
-            self.board[row][col] = 0
-            return True
-        return False
+        return self.apply_move(row, col, 0)
 
     def find_empty_cell(self):
         """Returns an empty cell in the board. If none exist, return (Board.ERROR, Board.ERROR)"""
@@ -127,24 +135,3 @@ class Board:
                 if not self.is_legal(row, col, self.board[row][col]):
                     return False
         return True
-
-
-if __name__ == '__main__':
-    game = Board()
-    test_board = [
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 8, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0]
-    ]
-    game.set_board(test_board)
-    print(game)
-    print(game.is_legal(0, 0, 2))
-    print(game.is_legal(6, 1, 8))
-    print(game.is_legal(1, 1, 8))
-    print(game.is_legal(0, 6, 8))

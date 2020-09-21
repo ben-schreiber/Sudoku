@@ -24,6 +24,8 @@ class GUI:
         self.board = board
         self.height, self.width = self.board.height, self.board.width
         self.playing = True
+        self.won = False
+        self.wrong = False
         self.cells = []
         self.highlighted_cell = None
         self.check_button = None
@@ -55,8 +57,10 @@ class GUI:
                         self.highlighted_cell = clicked_cell[0]
                         expecting_input = True
                 elif self.check_button.collidepoint(pos):  # The user clicked the 'Check Board' button
-                    correct = self.check_board()
-                    print(correct)
+                    if self.check_board():  # If the board is full and correct
+                        self.won = True
+                    else:
+                        self.wrong = True
                 else:  # If the user clicked on something other than a cell
                     self.highlighted_cell = None
                     expecting_input = False
@@ -203,6 +207,24 @@ class GUI:
                 self.highlighted_cell
             )
 
+    def draw_winner_overlay(self):
+        """Draws an overlay when the user wins the game"""
+        # Draw transparent overlay
+        surface = pg.Surface(GUI.WINDOW_SIZE, pg.SRCALPHA)
+        surface.fill((255, 255, 255, 170))
+        self.window.blit(surface, (0, 0))
+
+        # Draw message
+        font = pg.font.SysFont('times new roman', 72)
+        text = font.render('You Won!', 1, (0, 0, 0))
+        self.window.blit(text, (120, 150))
+
+    def draw_incorrect_board_overlay(self):
+        """Draws an overlay on the board when the user wrongly hits the 'check board' button"""
+        surface = pg.Surface(GUI.WINDOW_SIZE, pg.SRCALPHA)
+        surface.fill((253, 100, 100, 170))
+        self.window.blit(surface, (0, 0))
+
     def draw_all(self, init=False):
         """Draws the graphics onto the window. If drawing for the first time, set init to 'True'"""
         self.draw_grid(init)
@@ -211,5 +233,15 @@ class GUI:
         self.draw_horizontal_lines()
         self.draw_numbers()
         self.draw_check_board_button()
+        if self.won:
+            self.draw_winner_overlay()
+            pg.display.update()
+            pg.time.delay(2000)
+            self.won = False
+        elif self.wrong:
+            self.draw_incorrect_board_overlay()
+            pg.display.update()
+            pg.time.delay(200)
+            self.wrong = False
 
         pg.display.update()
