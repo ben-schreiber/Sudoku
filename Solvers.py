@@ -11,6 +11,7 @@ class Solver:
         self.board = board
         self.original_board = deepcopy(board)
         self.solved = False
+        self.steps = []  # Stores all of the steps
 
     def solve_board(self):
         """
@@ -22,6 +23,17 @@ class Solver:
     def was_solved(self):
         """Returns False unless a solution was found when calling self.solve_board()"""
         return self.solved
+
+    def get_steps(self):
+        """Returns all of the steps used to find a solution. Each step is a (row, col, num) triplet"""
+        return self.steps
+
+    def record_step(self, step):
+        """
+        Records a step as the solver solves the board
+        :param step: A (row, col, num) tuple triplet
+        """
+        self.steps.append(step)
 
 
 class BacktrackingSolver(Solver):
@@ -44,9 +56,11 @@ class BacktrackingSolver(Solver):
         for num in self.board.valid_nums:
             if self.board.is_legal(row, col, num) and self.original_board.board[row][col] == 0:
                 self.board.apply_move(row, col, num)  # Set the number
+                self.record_step((row, col, num))
                 if self.solve_board_helper():
                     return True
                 self.board.reset_cell(row, col)  # Undo the setting
+                self.record_step((row, col, 0))
 
 
 def get_solver(solver_name, board):

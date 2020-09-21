@@ -29,8 +29,8 @@ class GUI:
         self.cells = []
         self.highlighted_cell = None
         self.check_button = None
+        self.backtracking_button = None
         self.board_solution = self.get_solution()
-        print(self.board_solution)
 
     def run_game(self):
         """Manages the logic of the game"""
@@ -61,6 +61,8 @@ class GUI:
                         self.won = True
                     else:
                         self.wrong = True
+                elif self.backtracking_button.collidepoint(pos):  # The user clicked on the 'Backtracking' button
+                    pass  # todo
                 else:  # If the user clicked on something other than a cell
                     self.highlighted_cell = None
                     expecting_input = False
@@ -159,6 +161,18 @@ class GUI:
         text = font.render('Check Board', 1, (0, 0, 0))
         self.window.blit(text, (468, 10))
 
+    def draw_backtracking_button(self):
+        """Draws the 'Backtracking' button on the right of the board"""
+        cell = pg.draw.rect(
+            self.window,
+            GUI.CHECK_BOARD_COLOR,
+            (465, 40, 100, 30)
+        )
+        self.backtracking_button = cell
+        font = pg.font.SysFont('times new roman', 17)
+        text = font.render('Backtracking', 1, (0, 0, 0))
+        self.window.blit(text, (468, 45))
+
     def draw_numbers(self):
         """Draws the numbers onto the board"""
         font_init_board = pg.font.SysFont('times new roman', 22, bold=True)
@@ -233,6 +247,9 @@ class GUI:
         self.draw_horizontal_lines()
         self.draw_numbers()
         self.draw_check_board_button()
+        self.draw_backtracking_button()
+
+        # Draw an overlay if applicable
         if self.won:
             self.draw_winner_overlay()
             pg.display.update()
