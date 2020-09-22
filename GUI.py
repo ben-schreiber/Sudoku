@@ -74,12 +74,12 @@ class GUI:
                     self.highlighted_cell = None
                     expecting_input = False
 
-            elif event.type == pg.KEYDOWN and expecting_input:  # If the user is attempting to input a number in the highlighted cell
-                if event.key in GUI.VALID_NUMS:
+            elif event.type == pg.KEYDOWN and expecting_input:  # If the user hits a key on the keyboard while a cell is highlighted
+                if event.key in GUI.VALID_NUMS:  # If the user hit a number key
                     col, row, *_ = self.highlighted_cell
                     row, col = self.convert_row_col_from_pixel(row, col)
                     self.board.apply_move(row, col, self.convert_pg_number(event.key))
-                elif event.key in GUI.ARROW_KEYS:
+                elif event.key in GUI.ARROW_KEYS:  # If the user hit an arrow key
                     self.move_highlighted_cell(event.key)
 
             self.draw_all()
@@ -92,14 +92,17 @@ class GUI:
         :param event_key: A pygame constant representing one of the four arrow keys
         """
         col, row, _x, _y = self.highlighted_cell
-        if event_key == pg.K_UP and row > 0:
-            self.highlighted_cell = (col, row - GUI.SQUARE_SIZE, _x, _y)
-        elif event_key == pg.K_DOWN and row < self.board.height - 1:
-            self.highlighted_cell = (col, row + GUI.SQUARE_SIZE, _x, _y)
-        elif event_key == pg.K_RIGHT and col < self.board.width - 1:
-            self.highlighted_cell = (col + GUI.SQUARE_SIZE, row, _x, _y)
-        elif event_key == pg.K_LEFT and col > 0:
-            self.highlighted_cell = (col - GUI.SQUARE_SIZE, row, _x, _y)
+        _row, _col = self.convert_row_col_from_pixel(row, col)
+        if event_key == pg.K_UP and _row > 0:
+            _row = _row - 1
+        elif event_key == pg.K_DOWN and _row < self.board.height - 1:
+            _row = _row + 1
+        elif event_key == pg.K_RIGHT and _col < self.board.width - 1:
+            _col = _col + 1
+        elif event_key == pg.K_LEFT and _col > 0:
+            _col = _col - 1
+        row, col = self.convert_row_col_to_pixel(_row, _col)
+        self.highlighted_cell = (col, row, _x, _y)
 
     def check_board(self):
         """Checks the current board against the solution. Will return True iff the current board is both full and correct"""
