@@ -10,10 +10,12 @@ class GUI:
     CELL_BG_COLOR = (0, 0, 0)
     CELL_CLICKED_COLOR = (208, 208, 208)
     CHECK_BOARD_COLOR = (153, 204, 255)
+    SOLVER_COLOR = (255, 153, 51)
     SQUARE_SIZE = 50
     DIVIDER_SIZE = 5
     FPS = 30
-    VALID_NUMS = [pg.K_0, pg.K_1, pg.K_2, pg.K_3, pg.K_4, pg.K_5, pg.K_6, pg.K_7, pg.K_8, pg.K_9]
+    VALID_NUMS = [pg.K_0, pg.K_1, pg.K_2, pg.K_3, pg.K_4, pg.K_5, pg.K_6, pg.K_7, pg.K_8, pg.K_9, pg.K_BACKSPACE]
+    ARROW_KEYS = [pg.K_LEFT, pg.K_RIGHT, pg.K_UP, pg.K_DOWN]
 
     def __init__(self, board):
         pg.init()
@@ -31,6 +33,7 @@ class GUI:
         self.check_button = None
         self.backtracking_button = None
         self.board_solution = self.get_solution()
+        # print(self.board_solution)
 
     def run_game(self):
         """Manages the logic of the game"""
@@ -41,7 +44,6 @@ class GUI:
         while self.playing:
 
             self.clock.tick(GUI.FPS)
-
             event = pg.event.wait()
             if event.type == pg.QUIT:
                 self.playing = False
@@ -49,6 +51,7 @@ class GUI:
             elif event.type == pg.MOUSEBUTTONUP:
                 pos = pg.mouse.get_pos()
                 clicked_cell = [cell for cell in self.cells if cell.collidepoint(pos)]
+
                 if len(clicked_cell) == 1:  # If the user clicked on a cell on the board
                     if clicked_cell[0] == self.highlighted_cell:  # If the user clicked on an already highlighted cell
                         self.highlighted_cell = None
@@ -56,13 +59,17 @@ class GUI:
                     else:  # If the user clicked on a non-highlighted cell
                         self.highlighted_cell = clicked_cell[0]
                         expecting_input = True
+
                 elif self.check_button.collidepoint(pos):  # The user clicked the 'Check Board' button
                     if self.check_board():  # If the board is full and correct
                         self.won = True
                     else:
                         self.wrong = True
+
                 elif self.backtracking_button.collidepoint(pos):  # The user clicked on the 'Backtracking' button
-                    pass  # todo
+                    self.animate_backtracking_solution()
+                    self.won = True
+
                 else:  # If the user clicked on something other than a cell
                     self.highlighted_cell = None
                     expecting_input = False
@@ -70,12 +77,29 @@ class GUI:
             elif event.type == pg.KEYDOWN and expecting_input:  # If the user is attempting to input a number in the highlighted cell
                 if event.key in GUI.VALID_NUMS:
                     col, row, *_ = self.highlighted_cell
-                    row, col = self.convert_row_col(row, col)
+                    row, col = self.convert_row_col_from_pixel(row, col)
                     self.board.apply_move(row, col, self.convert_pg_number(event.key))
+                elif event.key in GUI.ARROW_KEYS:
+                    self.move_highlighted_cell(event.key)
 
             self.draw_all()
 
         pg.quit()
+
+    def move_highlighted_cell(self, event_key):  # TODO
+        """
+        Moves the highlighted cell according to the user's input
+        :param event_key: A pygame constant representing one of the four arrow keys
+        """
+        col, row, _x, _y = self.highlighted_cell
+        if event_key == pg.K_UP and row > 0:
+            self.highlighted_cell = (col, row - GUI.SQUARE_SIZE, _x, _y)
+        elif event_key == pg.K_DOWN and row < self.board.height - 1:
+            self.highlighted_cell = (col, row + GUI.SQUARE_SIZE, _x, _y)
+        elif event_key == pg.K_RIGHT and col < self.board.width - 1:
+            self.highlighted_cell = (col + GUI.SQUARE_SIZE, row, _x, _y)
+        elif event_key == pg.K_LEFT and col > 0:
+            self.highlighted_cell = (col - GUI.SQUARE_SIZE, row, _x, _y)
 
     def check_board(self):
         """Checks the current board against the solution. Will return True iff the current board is both full and correct"""
@@ -85,12 +109,37 @@ class GUI:
                     return False
         return True
 
+    def animate_backtracking_solution(self):
+        """Will solve the board using backtracking and then animate the steps required to find the solution"""
+        solver = BacktrackingSolver(deepcopy(self.board))
+        solver.solve_board()
+        steps = solver.get_steps()
+
+        for row, col, num in steps:
+            events = pg.event.get()  # Needs to be here; otherwise, python will think the program crashed because we aren't checking for event inputs
+            self.clock.tick(GUI.FPS)
+            pixel_row, pixel_col = self.convert_row_col_to_pixel(row, col)
+            self.highlighted_cell = (pixel_col, pixel_row, GUI.SQUARE_SIZE, GUI.SQUARE_SIZE)
+            self.board.apply_move(row, col, num)
+            self.draw_all()
+            pg.time.delay(50)
+
     def get_solution(self):
         """Calculates and returns the solution to the board"""
         solver = BacktrackingSolver(deepcopy(self.board))
         return solver.solve_board()
 
-    def convert_row_col(self, row, col):
+    def convert_row_col_to_pixel(self, row, col):
+        """Converts the (row, col) pair from Sudoku board units to pixel units"""
+        num_row_dividers = row // self.board.mini_box_height
+        _row = GUI.SQUARE_SIZE * row + num_row_dividers * GUI.DIVIDER_SIZE
+
+        num_col_dividers = col // self.board.mini_box_width
+        _col = GUI.SQUARE_SIZE * col + num_col_dividers * GUI.DIVIDER_SIZE
+
+        return _row, _col
+
+    def convert_row_col_from_pixel(self, row, col):
         """Converts the (row, col) pair from pixel units to the Sudoku board units"""
         return_row, return_col = 0, 0
 
@@ -127,7 +176,7 @@ class GUI:
             return 8
         elif num == pg.K_9:
             return 9
-        elif num == pg.K_0:
+        elif num == pg.K_0 or num == pg.K_BACKSPACE:
             return 0
 
     def draw_grid(self, init=False):
@@ -165,7 +214,7 @@ class GUI:
         """Draws the 'Backtracking' button on the right of the board"""
         cell = pg.draw.rect(
             self.window,
-            GUI.CHECK_BOARD_COLOR,
+            GUI.SOLVER_COLOR,
             (465, 40, 100, 30)
         )
         self.backtracking_button = cell
