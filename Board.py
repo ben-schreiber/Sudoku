@@ -50,7 +50,7 @@ class Board:
             output += '\n'
         return output
 
-    def is_legal(self, row, col, num):
+    def is_legal(self, row, col, num, check_occupied=False):
         """
         Given the cell coordinates and attempted number, returns whether or not
         the number can legally be placed there. Does not account for if the desired cell is already occupied
@@ -59,14 +59,19 @@ class Board:
         :param num: The number
         :return: True iff legal placement
         """
+        if check_occupied and self.board[row][col] != 0:
+            return False
+
         # Check the rest of the row
         for other_col_coordinate in range(self.width):
             if other_col_coordinate != col and self.board[row][other_col_coordinate] == num:
+                # print(f'1 -- {(row, other_col_coordinate, num)} and {self.board[row][other_col_coordinate]}')
                 return False
 
         # Check the rest of the column
         for other_row_coordinate in range(self.height):
             if other_row_coordinate != row and self.board[other_row_coordinate][col] == num:
+                # print(f'2 -- {(other_row_coordinate, col, num)} and {self.board[other_row_coordinate][col]}')
                 return False
 
         # Check the mini box that the cell resides in
@@ -76,6 +81,7 @@ class Board:
         for _row in range(self.mini_box_height):
             for _col in range(self.mini_box_width):
                 if (_row != row or _col != col) and self.board[row_shift * self.mini_box_height + _row][col_shift * self.mini_box_width + _col] == num:
+                    # print(f'3 -- {(_row, _col, num)} and {self.board[_row][_col]}')
                     return False
 
         return True
@@ -135,3 +141,30 @@ class Board:
                 if not self.is_legal(row, col, self.board[row][col]):
                     return False
         return True
+
+    def get_legal_nums_for_cell(self, row, col):
+        """
+        Calculates all of the legal numbers that can be placed in the requested cell
+        :param row: Row of the desired cell
+        :param col: Column of the desired cell
+        :return: A list of ints of possible values
+        """
+        return [num for num in self.valid_nums if self.is_legal(row, col, num, check_occupied=True)]
+
+
+if __name__ == '__main__':
+    board = Board()
+    tester = [
+        [0, 0, 0, 0, 0, 0, 5, 7, 3],
+        [2, 3, 5, 0, 4, 0, 1, 6, 9],
+        [1, 6, 7, 9, 3, 5, 2, 8, 4],
+        [6, 7, 8, 1, 2, 3, 9, 4, 5],
+        [0, 9, 0, 0, 8, 0, 7, 3, 2],
+        [0, 0, 2, 0, 7, 9, 8, 1, 6],
+        [8, 0, 0, 6, 9, 0, 3, 5, 0],
+        [0, 2, 6, 0, 0, 0, 4, 9, 0],
+        [0, 0, 0, 0, 0, 0, 6, 2, 0]
+    ]
+    board.set_board(tester)
+    print(board)
+    print(board.get_legal_nums_for_cell(5, 4))

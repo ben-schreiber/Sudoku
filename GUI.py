@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 import pygame as pg
-from Solvers import BacktrackingSolver
+from Solvers import BacktrackingSolver, MinimumRemainingValuesSolver
 
 
 class GUI:
@@ -32,6 +32,7 @@ class GUI:
         self.highlighted_cell = None
         self.check_button = None
         self.backtracking_button = None
+        self.mrv_button = None
         self.board_solution = self.get_solution()
         # print(self.board_solution)
 
@@ -68,6 +69,10 @@ class GUI:
 
                 elif self.backtracking_button.collidepoint(pos):  # The user clicked on the 'Backtracking' button
                     self.animate_backtracking_solution()
+                    self.won = True
+
+                elif self.mrv_button.collidepoint(pos):  # The user clicked on the 'mrv' button
+                    self.animate_mrv_solution()
                     self.won = True
 
                 else:  # If the user clicked on something other than a cell
@@ -112,9 +117,7 @@ class GUI:
                     return False
         return True
 
-    def animate_backtracking_solution(self):
-        """Will solve the board using backtracking and then animate the steps required to find the solution"""
-        solver = BacktrackingSolver(deepcopy(self.board))
+    def general_animation(self, solver):
         solver.solve_board()
         steps = solver.get_steps()
 
@@ -126,6 +129,16 @@ class GUI:
             self.board.apply_move(row, col, num)
             self.draw_all()
             pg.time.delay(50)
+
+    def animate_backtracking_solution(self):
+        """Will solve the board using backtracking and then animate the steps required to find the solution"""
+        solver = BacktrackingSolver(deepcopy(self.board))
+        self.general_animation(solver)
+
+    def animate_mrv_solution(self):
+        """Will solve the board using mrv and then animate the steps required to find the solution"""
+        solver = MinimumRemainingValuesSolver(deepcopy(self.board))
+        self.general_animation(solver)
 
     def get_solution(self):
         """Calculates and returns the solution to the board"""
@@ -225,6 +238,18 @@ class GUI:
         text = font.render('Backtracking', 1, (0, 0, 0))
         self.window.blit(text, (468, 45))
 
+    def draw_mrv_button(self):
+        """Draws the 'MRV' button on the right of the board"""
+        cell = pg.draw.rect(
+            self.window,
+            GUI.SOLVER_COLOR,
+            (465, 75, 100, 30)
+        )
+        self.mrv_button = cell
+        font = pg.font.SysFont('times new roman', 17)
+        text = font.render('MRV', 1, (0, 0, 0))
+        self.window.blit(text, (468, 80))
+
     def draw_numbers(self):
         """Draws the numbers onto the board"""
         font_init_board = pg.font.SysFont('times new roman', 22, bold=True)
@@ -300,6 +325,7 @@ class GUI:
         self.draw_numbers()
         self.draw_check_board_button()
         self.draw_backtracking_button()
+        self.draw_mrv_button()
 
         # Draw an overlay if applicable
         if self.won:

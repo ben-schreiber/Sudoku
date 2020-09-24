@@ -1,17 +1,20 @@
 from Board import Board
 from copy import deepcopy
+from time import time
 
 
 class Solver:
 
     BACKTRACKING_SOLVER = 'backtracking'
-    SOLVERS = [BACKTRACKING_SOLVER]
+    MRV_SOLVER = 'mrv'
+    SOLVERS = [BACKTRACKING_SOLVER, MRV_SOLVER]
 
     def __init__(self, board: Board):
         self.board = board
         self.original_board = deepcopy(board)
         self.solved = False
         self.steps = []  # Stores all of the steps
+        self.time_used = 0
 
     def solve_board(self):
         """
@@ -35,6 +38,10 @@ class Solver:
         """
         self.steps.append(step)
 
+    def get_time_used_to_solve(self):
+        """Returns the amount of time needed to solve the board"""
+        return self.time_used
+
 
 class BacktrackingSolver(Solver):
 
@@ -42,10 +49,13 @@ class BacktrackingSolver(Solver):
         super().__init__(board)
 
     def solve_board(self):
+        start = time()
         if self.solve_board_helper():
+            self.time_used = time() - start
             self.solved = True
             return self.board
         else:
+            self.time_used = time() - start
             return self.original_board
 
     def solve_board_helper(self):
@@ -63,7 +73,113 @@ class BacktrackingSolver(Solver):
                 self.record_step((row, col, 0))
 
 
+class MinimumRemainingValuesSolver(BacktrackingSolver):
+
+    def __init__(self, board):
+        super().__init__(board)
+        self.legal_values = dict()  # A dict of Key=(row, col) and Value=[num,...]
+        self.__init_legal_values()
+
+    def __init_legal_values(self):
+        """
+        Initializes the legal_values dictionary
+        At first, each empty cell can have all nums; each non-empty cell can have no nums
+        """
+        for row in range(self.board.height):
+            for col in range(self.board.width):
+                if self.board.initial_board[row][col] == 0:
+                    self.legal_values[(row, col)] = self.board.get_legal_nums_for_cell(row, col)
+
+    def get_mrv_cell(self):
+        """Given the current state of the board, returns the (row, col) pair with the minimum remaining number of possible values"""
+        min_cell = self.board.ERROR, self.board.ERROR
+        min_value = float('inf')
+        for cell in self.legal_values.keys():
+            if len(self.legal_values[cell]) < min_value:
+                min_value = len(self.legal_values[cell])
+                min_cell = cell
+        return min_cell
+
+    def do_move(self, row, col, num, removing=True):
+        self.board.apply_move(row, col, num)
+        self.record_step((row, col, num))
+        self.update_legal_values(row, col, num, removing)
+
+    def update_legal_values(self, row, col, num, removing=True):
+        """
+        Updates the legal_values dict. If removing is set to True, that means we just placed a number on the board. If removing is
+        set to False, that means we just reset the cell
+        :param row: The row of the cell
+        :param col: The column of the cell
+        :param num: The number placed in the cell
+        :param removing: Boolean if we are setting or resetting the cell
+        """
+        # Update legal values for the current cell
+        if removing:
+            self.legal_values.pop((row, col), None)
+        else:
+            self.legal_values[(row, col)] = [num]
+
+        # Update legal values for all other cells in the same row
+        for other_col in range(self.board.width):
+            if other_col != col:
+                vals = self.board.get_legal_nums_for_cell(row, other_col)
+                if len(vals) == 0:
+                    self.legal_values.pop((row, other_col), None)
+                else:
+                    self.legal_values[(row, other_col)] = vals
+
+        # Update legal values for all other cells in the same column
+        for other_row in range(self.board.height):
+            if other_row != row:
+                vals = self.board.get_legal_nums_for_cell(other_row, col)
+                if len(vals) == 0:
+                    self.legal_values.pop((other_row, col), None)
+                else:
+                    self.legal_values[(other_row, col)] = vals
+
+        # Update legal values for all other cells in the same mini box that are not in the same row or col
+        width_mini = col // self.board.mini_box_width
+        height_mini = row // self.board.mini_box_height
+
+        for other_row in range(self.board.mini_box_height * height_mini, (self.board.mini_box_height + 1) * height_mini + 1):
+            for other_col in range(self.board.mini_box_width * width_mini, (self.board.mini_box_width + 1) * width_mini + 1):
+                if other_col != col and other_row != row:
+
+                    vals = self.board.get_legal_nums_for_cell(other_row, other_col)
+                    if len(vals) == 0:
+                        self.legal_values.pop((other_row, other_col), None)
+                    else:
+                        self.legal_values[(other_row, other_col)] = vals
+
+    def solve_board_helper(self):
+        row, col = self.get_mrv_cell()
+        if row == self.board.ERROR:  # If there are no more empty cells
+            return True
+        for num in self.legal_values[(row, col)]:
+            if self.original_board.board[row][col] == 0:
+                self.do_move(row, col, num)
+
+                if self.solve_board_helper():
+                    return True
+
+                self.do_move(row, col, 0, removing=False)
+
+
 def get_solver(solver_name, board):
     """Given the string input representing the name of the solver, return the Solver object"""
     if solver_name == Solver.BACKTRACKING_SOLVER:
         return BacktrackingSolver(board)
+    elif solver_name == Solver.MRV_SOLVER:
+        return MinimumRemainingValuesSolver(board)
+
+
+if __name__ == '__main__':
+    board = Board()
+    solver = get_solver(Solver.MRV_SOLVER, board)
+
+    solved_board = solver.solve_board()
+    print(f'Solved Board:\n{solved_board}')
+    print(f'Solved in {solver.get_time_used_to_solve()} seconds')
+    print(f'Successfully solved = {solver.was_solved()}')
+    print(f'Steps taken were \n{solver.get_steps()}')
