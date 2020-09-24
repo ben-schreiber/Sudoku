@@ -16,13 +16,6 @@ class Solver:
         self.steps = []  # Stores all of the steps
         self.time_used = 0
 
-    def solve_board(self):
-        """
-        Solves the board stored in memory if possible. Will update the Solver object accordingly if the board was solved
-        :return: The board object after solving if a solution is possible; otherwise, returns original board
-        """
-        pass
-
     def was_solved(self):
         """Returns False unless a solution was found when calling self.solve_board()"""
         return self.solved
@@ -42,13 +35,21 @@ class Solver:
         """Returns the amount of time needed to solve the board"""
         return self.time_used
 
+    def get_cell(self):
+        """Returns a cell to attempt to fill"""
+        return self.board.ERROR, self.board.ERROR
 
-class BacktrackingSolver(Solver):
-
-    def __init__(self, board: Board):
-        super().__init__(board)
+    def get_vals_for_cell(self, row, col):
+        """
+        Returns a list of values for the given (row, col) pair
+        """
+        return []
 
     def solve_board(self):
+        """
+        Solves the board stored in memory if possible. Will update the Solver object accordingly if the board was solved
+        :return: The board object after solving if a solution is possible; otherwise, returns original board
+        """
         start = time()
         if self.solve_board_helper():
             self.time_used = time() - start
@@ -59,26 +60,47 @@ class BacktrackingSolver(Solver):
             return self.original_board
 
     def solve_board_helper(self):
-        """A helper function. Actually performs the solving"""
-        row, col = self.board.find_empty_cell()
+        row, col = self.get_cell()
         if row == self.board.ERROR:  # If there are no more empty cells
             return True
-        for num in self.board.valid_nums:
-            if self.board.is_legal(row, col, num) and self.original_board.board[row][col] == 0:
-                self.board.apply_move(row, col, num)  # Set the number
-                self.record_step((row, col, num))
+        for num in self.get_vals_for_cell(row, col):
+            if self.original_board.board[row][col] == 0:
+                self.do_move(row, col, num)
+
                 if self.solve_board_helper():
                     return True
-                self.board.reset_cell(row, col)  # Undo the setting
-                self.record_step((row, col, 0))
+
+                self.do_move(row, col, 0, removing=False)
+
+    def do_move(self, row, col, num, removing=True):
+        pass
 
 
-class MinimumRemainingValuesSolver(BacktrackingSolver):
+class BacktrackingSolver(Solver):
+
+    def __init__(self, board: Board):
+        super().__init__(board)
+
+    def get_cell(self):
+        return self.board.find_empty_cell()
+
+    def get_vals_for_cell(self, row, col):
+        return self.board.valid_nums
+
+    def do_move(self, row, col, num, removing=True):
+        self.board.apply_move(row, col, num)
+        self.record_step((row, col, num))
+
+
+class MinimumRemainingValuesSolver(Solver):
 
     def __init__(self, board):
         super().__init__(board)
         self.legal_values = dict()  # A dict of Key=(row, col) and Value=[num,...]
         self.__init_legal_values()
+
+    def get_vals_for_cell(self, row, col):
+        return self.legal_values[(row, col)]
 
     def __init_legal_values(self):
         """
@@ -90,7 +112,7 @@ class MinimumRemainingValuesSolver(BacktrackingSolver):
                 if self.board.initial_board[row][col] == 0:
                     self.legal_values[(row, col)] = self.board.get_legal_nums_for_cell(row, col)
 
-    def get_mrv_cell(self):
+    def get_cell(self):
         """Given the current state of the board, returns the (row, col) pair with the minimum remaining number of possible values"""
         min_cell = self.board.ERROR, self.board.ERROR
         min_value = float('inf')
@@ -151,19 +173,6 @@ class MinimumRemainingValuesSolver(BacktrackingSolver):
                         self.legal_values.pop((other_row, other_col), None)
                     else:
                         self.legal_values[(other_row, other_col)] = vals
-
-    def solve_board_helper(self):
-        row, col = self.get_mrv_cell()
-        if row == self.board.ERROR:  # If there are no more empty cells
-            return True
-        for num in self.legal_values[(row, col)]:
-            if self.original_board.board[row][col] == 0:
-                self.do_move(row, col, num)
-
-                if self.solve_board_helper():
-                    return True
-
-                self.do_move(row, col, 0, removing=False)
 
 
 def get_solver(solver_name, board):

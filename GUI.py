@@ -331,7 +331,7 @@ class GUI:
         if self.won:
             self.draw_winner_overlay()
             pg.display.update()
-            pg.time.delay(2000)
+            pg.time.delay(1000)
             self.won = False
         elif self.wrong:
             self.draw_incorrect_board_overlay()
