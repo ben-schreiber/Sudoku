@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 import pygame as pg
-from Solvers import BacktrackingSolver, MinimumRemainingValuesSolver
+from Solvers import *
 
 
 class GUI:
@@ -33,6 +33,7 @@ class GUI:
         self.check_button = None
         self.backtracking_button = None
         self.mrv_button = None
+        self.lcv_button = None
         self.board_solution = self.get_solution()
         # print(self.board_solution)
 
@@ -73,6 +74,10 @@ class GUI:
 
                 elif self.mrv_button.collidepoint(pos):  # The user clicked on the 'mrv' button
                     self.animate_mrv_solution()
+                    self.won = True
+
+                elif self.lcv_button.collidepoint(pos):  # The user clicked on the 'lcv' button
+                    self.animate_lcv_solution()
                     self.won = True
 
                 else:  # If the user clicked on something other than a cell
@@ -138,6 +143,11 @@ class GUI:
     def animate_mrv_solution(self):
         """Will solve the board using mrv and then animate the steps required to find the solution"""
         solver = MinimumRemainingValuesSolver(deepcopy(self.board))
+        self.general_animation(solver)
+
+    def animate_lcv_solution(self):
+        """Will solve the board using lcv and then animate the steps required to find the solution"""
+        solver = LeastConstrainingValueSolver(deepcopy(self.board))
         self.general_animation(solver)
 
     def get_solution(self):
@@ -250,6 +260,18 @@ class GUI:
         text = font.render('MRV', 1, (0, 0, 0))
         self.window.blit(text, (468, 80))
 
+    def draw_lcv_button(self):
+        """Draws the 'LCV' button on the right of the board"""
+        cell = pg.draw.rect(
+            self.window,
+            GUI.SOLVER_COLOR,
+            (465, 110, 100, 30)
+        )
+        self.lcv_button = cell
+        font = pg.font.SysFont('times new roman', 17)
+        text = font.render('LCV', 1, (0, 0, 0))
+        self.window.blit(text, (468, 115))
+
     def draw_numbers(self):
         """Draws the numbers onto the board"""
         font_init_board = pg.font.SysFont('times new roman', 22, bold=True)
@@ -326,6 +348,7 @@ class GUI:
         self.draw_check_board_button()
         self.draw_backtracking_button()
         self.draw_mrv_button()
+        self.draw_lcv_button()
 
         # Draw an overlay if applicable
         if self.won:
