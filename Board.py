@@ -151,6 +151,10 @@ class Board:
         """
         return [num for num in self.valid_nums if self.is_legal(row, col, num, check_occupied=True)]
 
+    def reset_board(self):
+        """Resets the board to the original layout"""
+        self.board = self.initial_board
+
 
 if __name__ == '__main__':
     board = Board()

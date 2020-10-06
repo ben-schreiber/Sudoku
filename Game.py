@@ -1,6 +1,6 @@
 from Solvers import *
 from GUI import *
-from time import time
+import argparse
 
 
 class Game:
@@ -63,12 +63,10 @@ class Game:
 
     def run_solver_game(self, solver_name):
         print(f'Solving the board using {solver_name}. The original board is \n{self.board}')
-        start_time = time()
         solver_obj = get_solver(solver_name, self.board)
         solved_board = solver_obj.solve_board()
-        end_time = time()
         if solver_obj.was_solved():
-            print(f'The board was successfully solved in {end_time - start_time} seconds.\nHere is the solution:\n{solved_board}')
+            print(f'The board was successfully solved in {solver_obj.get_time_used_to_solve()} seconds.\nHere is the solution:\n{solved_board}')
         else:
             print(f'The solver could not find a solution to the board :(')
 
@@ -78,7 +76,20 @@ class Game:
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser('Get the display method, and solver name')
+    displays = ['gui', 'cli']
+    parser.add_argument('-d', '--display', choices=displays, dest='display', type=str, default='gui')
+    parser.add_argument('-s', '--solver', choices=Solver.SOLVERS, dest='solver', type=str, default=None)
+    args = parser.parse_args()
+
     game = Game()
-    # game.run_game_from_cli()
-    # game.run_solver_game('backtracking')
-    game.run_gui_game()
+    if args.display == 'cli':
+        if args.solver:
+            if args.solver in Solver.SOLVERS:
+                game.run_solver_game(args.solver)
+            else:
+                print(f'Invalid solver name.\nThe valid solver names are: {Solver.SOLVERS}')
+        else:
+            game.run_game_from_cli()
+    elif args.display == 'gui':
+        game.run_gui_game()
