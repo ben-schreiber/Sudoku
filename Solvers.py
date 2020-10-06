@@ -41,7 +41,9 @@ class Solver:
     LCV_SOLVER = 'lcv'
     BACKTRACKING_SOLVER = 'backtracking'
     MRV_SOLVER = 'mrv'
-    SOLVERS = [BACKTRACKING_SOLVER, MRV_SOLVER]
+    FORWARD_CHECKING_SOLVER = 'fcs'
+
+    SOLVERS = [BACKTRACKING_SOLVER, MRV_SOLVER, LCV_SOLVER, FORWARD_CHECKING_SOLVER]
 
     def __init__(self, board: Board):
         self.board = board
@@ -126,15 +128,12 @@ class BacktrackingSolver(Solver):
         self.record_step((row, col, num))
 
 
-class MinimumRemainingValuesSolver(Solver):
+class LegalValuesParent(Solver):
 
-    def __init__(self, board):
+    def __init__(self, board: Board):
         super().__init__(board)
-        self.legal_values = dict()  # A dict of Key=(row, col) and Value=[num,...]
+        self.legal_values = dict()
         self.__init_legal_values()
-
-    def get_vals_for_cell(self, row, col):
-        return self.legal_values[(row, col)]
 
     def __init_legal_values(self):
         """
@@ -146,24 +145,6 @@ class MinimumRemainingValuesSolver(Solver):
                 if self.board.initial_board[row][col] == 0:
                     self.legal_values[(row, col)] = self.board.get_legal_nums_for_cell(row, col)
 
-    def get_cell(self):
-        """Given the current state of the board, returns the (row, col) pair with the minimum remaining number of possible values"""
-        min_cell = self.board.ERROR, self.board.ERROR
-        min_value = float('inf')
-        for cell in self.legal_values.keys():
-            if len(self.legal_values[cell]) < min_value:
-                min_value = len(self.legal_values[cell])
-                min_cell = cell
-        check_row, check_col = self.board.find_empty_cell()
-        if min_cell[0] == self.board.ERROR and check_row != self.board.ERROR:
-            return check_row, check_col
-        return min_cell
-
-    def do_move(self, row, col, num, removing=True):
-        self.board.apply_move(row, col, num)
-        self.record_step((row, col, num))
-        self.update_legal_values(row, col, num, removing)
-
     def update_legal_values(self, row, col, num, removing=True):
         """
         Updates the legal_values dict. If removing is set to True, that means we just placed a number on the board. If removing is
@@ -173,6 +154,7 @@ class MinimumRemainingValuesSolver(Solver):
         :param num: The number placed in the cell
         :param removing: Boolean if we are setting or resetting the cell
         """
+
         # Update legal values for the current cell
         if removing:
             self.legal_values.pop((row, col), None)
@@ -212,6 +194,33 @@ class MinimumRemainingValuesSolver(Solver):
                         self.legal_values[(other_row, other_col)] = vals
 
 
+class MinimumRemainingValuesSolver(LegalValuesParent):
+
+    def __init__(self, board):
+        super().__init__(board)
+
+    def get_vals_for_cell(self, row, col):
+        return self.legal_values[(row, col)]
+
+    def get_cell(self):
+        """Given the current state of the board, returns the (row, col) pair with the minimum remaining number of possible values"""
+        min_cell = self.board.ERROR, self.board.ERROR
+        min_value = float('inf')
+        for cell in self.legal_values.keys():
+            if len(self.legal_values[cell]) < min_value:
+                min_value = len(self.legal_values[cell])
+                min_cell = cell
+        check_row, check_col = self.board.find_empty_cell()
+        if min_cell[0] == self.board.ERROR and check_row != self.board.ERROR:
+            return check_row, check_col
+        return min_cell
+
+    def do_move(self, row, col, num, removing=True):
+        self.board.apply_move(row, col, num)
+        self.record_step((row, col, num))
+        self.update_legal_values(row, col, num, removing)
+
+
 class LeastConstrainingValueSolver(MinimumRemainingValuesSolver):
     """
     This Solver uses the Least Constraining Value to determine which value to try next.
@@ -233,17 +242,17 @@ class LeastConstrainingValueSolver(MinimumRemainingValuesSolver):
         for num in legal_vals:
             count = 0
 
-            # Count values constrained for all other cells in the same row
+            # Count the number of cells in the same row that this num can be placed in
             for other_col in range(self.board.width):
                 if other_col != col and (row, other_col) in self.legal_values and num in self.legal_values[(row, other_col)]:  # If the number we are assigning to (row, col) could have been assigned to (row, other_col)
                     count += 1
 
-            # Count values constrained for all other cells in the same column
+            # Count the number of cells in the same column that this num can be placed in
             for other_row in range(self.board.height):
                 if other_row != row and (other_row, col) in self.legal_values and num in self.legal_values[(other_row, col)]:  # If the number we are assigning to (row, col) could have been assigned to (other_row, col)
                     count += 1
 
-            # Count values constrained for all other cells in the same mini box that are not in the same row or col
+            # Count the number of cells in the same mini box that this num can be placed in
             width_mini = col // self.board.mini_box_width
             height_mini = row // self.board.mini_box_height
 
@@ -256,6 +265,17 @@ class LeastConstrainingValueSolver(MinimumRemainingValuesSolver):
 
         return min_heap.get_sorted_list()
 
+    def do_move(self, row, col, num, removing=True):
+        self.board.apply_move(row, col, num)
+        self.record_step((row, col, num))
+        self.update_legal_values(row, col, num, removing)
+
+
+class ForwardCheckingSolver(LegalValuesParent):
+
+    def __init(self, board: Board):
+        super().__init__(board)
+
 
 def get_solver(solver_name, board):
     """Given the string input representing the name of the solver, return the Solver object"""
@@ -265,12 +285,15 @@ def get_solver(solver_name, board):
         return MinimumRemainingValuesSolver(board)
     elif solver_name == Solver.LCV_SOLVER:
         return LeastConstrainingValueSolver(board)
+    elif solver_name == Solver.FORWARD_CHECKING_SOLVER:
+        return ForwardCheckingSolver(board)
 
 
 if __name__ == '__main__':
     board = Board()
-    # solver = get_solver(Solver.LCV_SOLVER, board)
-    solver = get_solver(Solver.MRV_SOLVER, board)
+    # solver = get_solver(Solver.BACKTRACKING_SOLVER, board)
+    solver = get_solver(Solver.LCV_SOLVER, board)
+    # solver = get_solver(Solver.MRV_SOLVER, board)
 
     solved_board = solver.solve_board()
     print(f'Solved Board:\n{solved_board}')
