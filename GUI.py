@@ -34,8 +34,8 @@ class GUI:
         self.backtracking_button = None
         self.mrv_button = None
         self.lcv_button = None
+        self.fc_button = None
         self.board_solution = self.get_solution()
-        # print(self.board_solution)
 
     def run_game(self):
         """Manages the logic of the game"""
@@ -78,6 +78,10 @@ class GUI:
 
                 elif self.lcv_button.collidepoint(pos):  # The user clicked on the 'lcv' button
                     self.animate_lcv_solution()
+                    self.won = True
+
+                elif self.fc_button.collidepoint(pos):  # The user clicked on the 'fc' button
+                    self.animate_fc_solution()
                     self.won = True
 
                 else:  # If the user clicked on something other than a cell
@@ -135,6 +139,11 @@ class GUI:
             self.draw_all()
             pg.time.delay(50)
 
+    def animate_fc_solution(self):
+        """Will solve the board using Forward Checking and then animate the steps required to find the solution"""
+        solver = ForwardCheckingSolver(deepcopy(self.board))
+        self.general_animation(solver)
+
     def animate_backtracking_solution(self):
         """Will solve the board using backtracking and then animate the steps required to find the solution"""
         solver = BacktrackingSolver(deepcopy(self.board))
@@ -183,7 +192,7 @@ class GUI:
 
     @staticmethod
     def convert_pg_number(num):
-        """Converts a Pygame number constant to its corresponding int. Works for 0-9"""
+        """Converts a Pygame number constant to its corresponding int. Works for 0-9. BACKSPACE == 0"""
         if num == pg.K_1:
             return 1
         elif num == pg.K_2:
@@ -224,53 +233,30 @@ class GUI:
                 if init:
                     self.cells.append(cell)
 
-    def draw_check_board_button(self):
-        """Draws the 'Check Board' button on the right of the board"""
+    def draw_button(self, position, text):
+        """
+        Will draw a button on the side of the screen.
+        :param position: (int) the position the button should sit in. 0=top, 1, ....
+        :param text: The text to appear on the button
+        :return: Returns the pygame.rect object that was assigned as the button
+        """
         cell = pg.draw.rect(
             self.window,
             GUI.CHECK_BOARD_COLOR,
-            (465, 5, 100, 30)
+            (465, 5 + position * 35, 100, 30)
         )
-        self.check_button = cell
         font = pg.font.SysFont('times new roman', 17)
-        text = font.render('Check Board', 1, (0, 0, 0))
-        self.window.blit(text, (468, 10))
+        _text = font.render(text, 1, (0, 0, 0))
+        self.window.blit(_text, (468, 10 + position * 35))
+        return cell
 
-    def draw_backtracking_button(self):
-        """Draws the 'Backtracking' button on the right of the board"""
-        cell = pg.draw.rect(
-            self.window,
-            GUI.SOLVER_COLOR,
-            (465, 40, 100, 30)
-        )
-        self.backtracking_button = cell
-        font = pg.font.SysFont('times new roman', 17)
-        text = font.render('Backtracking', 1, (0, 0, 0))
-        self.window.blit(text, (468, 45))
-
-    def draw_mrv_button(self):
-        """Draws the 'MRV' button on the right of the board"""
-        cell = pg.draw.rect(
-            self.window,
-            GUI.SOLVER_COLOR,
-            (465, 75, 100, 30)
-        )
-        self.mrv_button = cell
-        font = pg.font.SysFont('times new roman', 17)
-        text = font.render('MRV', 1, (0, 0, 0))
-        self.window.blit(text, (468, 80))
-
-    def draw_lcv_button(self):
-        """Draws the 'LCV' button on the right of the board"""
-        cell = pg.draw.rect(
-            self.window,
-            GUI.SOLVER_COLOR,
-            (465, 110, 100, 30)
-        )
-        self.lcv_button = cell
-        font = pg.font.SysFont('times new roman', 17)
-        text = font.render('LCV', 1, (0, 0, 0))
-        self.window.blit(text, (468, 115))
+    def draw_all_buttons(self):
+        """Draws all of the buttons on the side of the screen"""
+        self.check_button = self.draw_button(0, 'Check Board')
+        self.backtracking_button = self.draw_button(1, 'Backtracking')
+        self.mrv_button = self.draw_button(2, 'MRV')
+        self.lcv_button = self.draw_button(3, 'LCV')
+        self.fc_button = self.draw_button(4, 'FC')
 
     def draw_numbers(self):
         """Draws the numbers onto the board"""
@@ -345,10 +331,7 @@ class GUI:
         self.draw_vertical_lines()
         self.draw_horizontal_lines()
         self.draw_numbers()
-        self.draw_check_board_button()
-        self.draw_backtracking_button()
-        self.draw_mrv_button()
-        self.draw_lcv_button()
+        self.draw_all_buttons()
 
         # Draw an overlay if applicable
         if self.won:
