@@ -233,16 +233,17 @@ class GUI:
                 if init:
                     self.cells.append(cell)
 
-    def draw_button(self, position, text):
+    def draw_button(self, position, text, color=(255, 153, 51)):
         """
         Will draw a button on the side of the screen.
         :param position: (int) the position the button should sit in. 0=top, 1, ....
         :param text: The text to appear on the button
+        :param color: The desired color of the button. Default is GUI.SOLVER_COLOR
         :return: Returns the pygame.rect object that was assigned as the button
         """
         cell = pg.draw.rect(
             self.window,
-            GUI.CHECK_BOARD_COLOR,
+            color,
             (465, 5 + position * 35, 100, 30)
         )
         font = pg.font.SysFont('times new roman', 17)
@@ -252,7 +253,7 @@ class GUI:
 
     def draw_all_buttons(self):
         """Draws all of the buttons on the side of the screen"""
-        self.check_button = self.draw_button(0, 'Check Board')
+        self.check_button = self.draw_button(0, 'Check Board', GUI.CHECK_BOARD_COLOR)
         self.backtracking_button = self.draw_button(1, 'Backtracking')
         self.mrv_button = self.draw_button(2, 'MRV')
         self.lcv_button = self.draw_button(3, 'LCV')

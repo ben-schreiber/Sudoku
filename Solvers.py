@@ -2,6 +2,7 @@ from Board import Board
 from copy import deepcopy
 from time import time
 import heapq
+import abc
 
 
 class PriorityQueue:
@@ -36,7 +37,7 @@ class PriorityQueue:
         return in_order
 
 
-class Solver:
+class Solver(abc.ABC):
 
     LCV_SOLVER = 'lcv'
     BACKTRACKING_SOLVER = 'backtracking'
@@ -102,13 +103,16 @@ class Solver:
         for num in self.get_vals_for_cell(row, col):
             if self.board.is_legal(row, col, num) and self.original_board.board[row][col] == 0:
                 self.do_move(row, col, num)
+                # print(f'Row={row}, Col={col}, Num={num}, Setting_num=True')
 
                 if self.solve_board_helper():
                     return True
 
-                self.do_move(row, col, 0, removing=False)
+                # print(f'Row={row}, Col={col}, Num={num}, Setting_num=False')
+                self.do_move(row, col, num, setting_num=False)
 
-    def do_move(self, row, col, num, removing=True):
+    @abc.abstractmethod
+    def do_move(self, row, col, num, setting_num=True):
         pass
 
 
@@ -123,9 +127,13 @@ class BacktrackingSolver(Solver):
     def get_vals_for_cell(self, row, col):
         return self.board.valid_nums
 
-    def do_move(self, row, col, num, removing=True):
-        self.board.apply_move(row, col, num)
-        self.record_step((row, col, num))
+    def do_move(self, row, col, num, setting_num=True):
+        if setting_num:
+            self.board.apply_move(row, col, num)
+            self.record_step((row, col, num))
+        else:
+            self.board.apply_move(row, col, 0)
+            self.record_step((row, col, 0))
 
 
 class LegalValuesParent(Solver):
@@ -145,6 +153,21 @@ class LegalValuesParent(Solver):
                 if self.board.initial_board[row][col] == 0:
                     self.legal_values[(row, col)] = self.board.get_legal_nums_for_cell(row, col)
 
+    def get_vals_for_cell(self, row, col):
+        return self.legal_values[(row, col)]
+
+    def get_cell(self):
+        return self.board.find_empty_cell()
+
+    def do_move(self, row, col, num, setting_num=True):
+        if setting_num:
+            self.board.apply_move(row, col, num)
+            self.record_step((row, col, num))
+        else:
+            self.board.apply_move(row, col, 0)
+            self.record_step((row, col, 0))
+        self.update_legal_values(row, col, num, setting_num)
+
     def update_legal_values(self, row, col, num, removing=True):
         """
         Updates the legal_values dict. If removing is set to True, that means we just placed a number on the board. If removing is
@@ -152,7 +175,7 @@ class LegalValuesParent(Solver):
         :param row: The row of the cell
         :param col: The column of the cell
         :param num: The number placed in the cell
-        :param removing: Boolean if we are setting or resetting the cell
+        :param removing: Boolean if we are setting{=True} or resetting{=False} the cell
         """
 
         # Update legal values for the current cell
@@ -199,9 +222,6 @@ class MinimumRemainingValuesSolver(LegalValuesParent):
     def __init__(self, board):
         super().__init__(board)
 
-    def get_vals_for_cell(self, row, col):
-        return self.legal_values[(row, col)]
-
     def get_cell(self):
         """Given the current state of the board, returns the (row, col) pair with the minimum remaining number of possible values"""
         min_cell = self.board.ERROR, self.board.ERROR
@@ -215,13 +235,8 @@ class MinimumRemainingValuesSolver(LegalValuesParent):
             return check_row, check_col
         return min_cell
 
-    def do_move(self, row, col, num, removing=True):
-        self.board.apply_move(row, col, num)
-        self.record_step((row, col, num))
-        self.update_legal_values(row, col, num, removing)
 
-
-class LeastConstrainingValueSolver(MinimumRemainingValuesSolver):
+class LeastConstrainingValueSolver(LegalValuesParent):
     """
     This Solver uses the Least Constraining Value to determine which value to try next.
     The heuristic chooses the value that rules out the fewest values in the remaining variables
@@ -229,9 +244,6 @@ class LeastConstrainingValueSolver(MinimumRemainingValuesSolver):
 
     def __init__(self, board):
         super().__init__(board)
-
-    # def get_cell(self):
-    #     return self.board.find_empty_cell()
 
     def get_vals_for_cell(self, row, col):
         if (row, col) not in self.legal_values:
@@ -265,16 +277,107 @@ class LeastConstrainingValueSolver(MinimumRemainingValuesSolver):
 
         return min_heap.get_sorted_list()
 
-    def do_move(self, row, col, num, removing=True):
-        self.board.apply_move(row, col, num)
-        self.record_step((row, col, num))
-        self.update_legal_values(row, col, num, removing)
-
 
 class ForwardCheckingSolver(LegalValuesParent):
+    """
+    This Solver will use forward checking in order to detect failed constraints
+    early. It does so by keeping track of all legal values for each cell at all
+    times. When it detects that a move in one cell will eliminate all remaining
+    possible values in another cell, it will skip that value.
+    """
 
-    def __init(self, board: Board):
+    def __init__(self, board: Board):
         super().__init__(board)
+
+
+    # def get_vals_for_cell(self, row, col):
+    #     values = self.legal_values[(row, col)]
+    #     output = []
+    #     for value in values:
+    #         for _row in range(self.board.height):
+    #             for _col in range(self.board.width):
+    #                 if self.board.board[_row][_col] == 0 and (_row, _col) not in self.legal_values:
+
+    def solve_board_helper(self):
+        row, col = self.get_cell()
+        if row == self.board.ERROR:  # If there are no more empty cells
+            return True
+        for num in self.get_vals_for_cell(row, col):
+            if self.board.is_legal(row, col, num) and self.original_board.board[row][col] == 0:
+                if not self.do_move(row, col, num):
+                    continue
+                # print(f'Row={row}, Col={col}, Num={num}, Setting_num=True')
+
+                if self.solve_board_helper():
+                    return True
+
+                # print(f'Row={row}, Col={col}, Num={num}, Setting_num=False')
+                self.do_move(row, col, num, setting_num=False)
+
+    def do_move(self, row, col, num, setting_num=True):
+        if not setting_num:
+            self.board.apply_move(row, col, 0)
+            self.record_step((row, col, 0))
+        else:
+            self.board.apply_move(row, col, num)
+            self.update_legal_values(row, col, num, setting_num)
+
+            proceed = True
+            if num != 0:
+                for _row in range(self.board.height):
+                    for _col in range(self.board.width):
+                        if self.board.board[_row][_col] == 0 and (_row, _col) not in self.legal_values:
+                            proceed = False
+                            break
+                    if not proceed:
+                        break
+            if proceed:
+                self.record_step((row, col, num))
+            else:
+                self.board.apply_move(row, col, 0)
+                self.update_legal_values(row, col, num, removing=False)
+                self.record_step((row, col, 0))
+            return proceed
+    #
+    # def get_vals_for_cell(self, row, col):
+    #     if (row, col) not in self.legal_values:
+    #         return []
+    #     output_vals = self.legal_values[(row, col)]
+    #     output = []
+    #     for val in output_vals:
+    #         valid_num = True
+    #
+    #         for _row in range(self.board.height):
+    #             if row != _row and (_row, col) in self.legal_values:
+    #                 values = self.legal_values[(_row, col)]
+    #                 if len(values) == 1 and val in values:
+    #                     valid_num = False
+    #                     break
+    #
+    #         if valid_num:
+    #             for _col in range(self.board.width):
+    #                 if col != _col and (row, _col) in self.legal_values:
+    #                     values = self.legal_values[(row, _col)]
+    #                     if len(values) == 1 and val in values:
+    #                         valid_num = False
+    #                         break
+    #
+    #         if valid_num:
+    #             width_mini = col // self.board.mini_box_width
+    #             height_mini = row // self.board.mini_box_height
+    #
+    #             for other_row in range(self.board.mini_box_height * height_mini, (self.board.mini_box_height + 1) * height_mini + 1):
+    #                 for other_col in range(self.board.mini_box_width * width_mini, (self.board.mini_box_width + 1) * width_mini + 1):
+    #                     if other_col != col and other_row != row and (other_row, other_col) in self.legal_values:
+    #                         values = self.legal_values[(other_row, other_col)]
+    #                         if len(values) == 1 and val in values:
+    #                             valid_num = False
+    #                             break
+    #
+    #         if valid_num:
+    #             output.append(val)
+    #
+    #     return output
 
 
 def get_solver(solver_name, board):
@@ -292,8 +395,9 @@ def get_solver(solver_name, board):
 if __name__ == '__main__':
     board = Board()
     # solver = get_solver(Solver.BACKTRACKING_SOLVER, board)
-    solver = get_solver(Solver.LCV_SOLVER, board)
+    # solver = get_solver(Solver.LCV_SOLVER, board)
     # solver = get_solver(Solver.MRV_SOLVER, board)
+    solver = get_solver(Solver.FORWARD_CHECKING_SOLVER, board)
 
     solved_board = solver.solve_board()
     print(f'Solved Board:\n{solved_board}')
